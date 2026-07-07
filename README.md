@@ -113,7 +113,6 @@ Identify the external source that got onto the Windows estate cleanly and how th
 
 **Flag Value:**
 `148.64.103.173, RDP`
-`2026-06-16T20:58:02Z`
 
 **Detection Strategy:**
 The estate is internal `10.x`, so any **public** source IP authenticating in is immediately suspect. Defender labels each IP with `RemoteIPType`, so filtering to `RemoteIPType == "Public"` isolates external logins in a single step. The surviving row shows `sancadmin` logging in with `LogonType == RemoteInteractive` — the log's term for a Remote Desktop (RDP) session.
@@ -130,8 +129,8 @@ DeviceLogonEvents
 ```
 
 **Evidence:**
+<img width="711" height="327" alt="q1" src="https://github.com/user-attachments/assets/033c98d4-354f-40aa-8d68-ecb3094b189e" />
 
-<img alt="Flag 1 - external RDP foothold" src="./images/flag01.png" />
 
 **Why This Matters:**
 `RemoteInteractive` = RDP. A public IP opening a hands-on remote session with a valid account is the definition of a clean, credential-based foothold — no exploit required. This IP and account become the thread pulled through the rest of the investigation.
@@ -145,7 +144,6 @@ Prove which host the attacker landed on first, rather than trusting the "obvious
 
 **Flag Value:**
 `npt-ws01, 148.64.103.173`
-`2026-06-16T20:57:54Z`
 
 **Detection Strategy:**
 The hunt lead warns the obvious story has the Linux box first. Instead of assuming, the earliest login per host is computed with `summarize min(Timestamp) by DeviceName`. The result is unambiguous: `npt-ws01` at 8:57 PM, `npt-srv01` at 9:58, `npt-linux01` last at 10:01.
@@ -163,7 +161,7 @@ DeviceLogonEvents
 
 **Evidence:**
 
-<img alt="Flag 2 - first-seen per host" src="./images/flag02.png" />
+<img width="450" height="223" alt="q2" src="https://github.com/user-attachments/assets/18099c9a-b456-42c8-82fa-a37eda3614dd" />
 
 **Why This Matters:**
 Timestamps beat theories. The Linux box had activity, but activity is not the same as being first — the Windows workstation was patient zero by a full hour. `min(Timestamp)` is the reliable way to prove ordering.
@@ -193,7 +191,7 @@ DeviceLogonEvents
 
 **Evidence:**
 
-<img alt="Flag 3 - operator machine loranse" src="./images/flag03.png" />
+<img width="499" height="142" alt="q3" src="https://github.com/user-attachments/assets/5bc0323d-b005-4eda-b911-0bdd5477c48d" />
 
 **Why This Matters:**
 The operator's own device (`loranse`) is a strong attribution artifact. The lesson: an empty field is often a too-tight filter, not missing data — loosening the filter surfaced the name.
@@ -207,7 +205,6 @@ Reconstruct how the server was reached — the method, the source, the session t
 
 **Flag Value:**
 `RDP, 148.64.103.173, RemoteInteractive`
-`2026-06-16T21:58:08Z`
 
 **Detection Strategy:**
 The question hinges on whether the server was pivoted to internally or hit directly. Filtering the server's successful logins shows the source is the **external** `148.64.103.173`, not an internal `10.x` address — so it was reached directly, over RDP.
@@ -225,7 +222,7 @@ DeviceLogonEvents
 
 **Evidence:**
 
-<img alt="Flag 4 - srv01 direct RDP" src="./images/flag04.png" />
+<img width="1010" height="470" alt="q4" src="https://github.com/user-attachments/assets/2fc23117-d64f-47b4-aacf-1e7a6329d9b6" />
 
 **Why This Matters:**
 Both Windows hosts were compromised directly from the internet with stolen credentials — not via lateral movement. Knowing what *wasn't* a pivot is as important as knowing what was. A `Network` → `RemoteInteractive` burst from one source is the RDP fingerprint.
@@ -239,7 +236,6 @@ Identify the first privilege-escalation check on the Linux host.
 
 **Flag Value:**
 `sudo -l`
-`2026-06-16T22:16:52Z`
 
 **Detection Strategy:**
 `sudo -l` lists what a user may run as sudo — the textbook first escalation check. The tell in the logs is a fumble-then-fix: `sudo -1` (digit one, invalid) five minutes before `sudo -l` (letter L).
@@ -256,7 +252,7 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 5 - sudo -l fumble then fix" src="./images/flag05.png" />
+<img width="597" height="222" alt="q5" src="https://github.com/user-attachments/assets/2c68e2f7-5adb-4dba-917c-67afee1cdc1a" />
 
 **Why This Matters:**
 A typo immediately followed by a correction is a hands-on-keyboard fingerprint — automation does not fat-finger flags. It confirms a live human and identifies the intended command.
@@ -270,7 +266,6 @@ Determine how the attacker checked whether the Windows boxes were reachable, and
 
 **Flag Value:**
 `/dev/tcp, 3389`
-`2026-06-16T22:21:28Z`
 
 **Detection Strategy:**
 No scanner was dropped — the reachability check uses bash's built-in `/dev/tcp`: `echo > /dev/tcp/10.2.0.10/3389`. Searching for that mechanism (and the RDP/SMB ports) surfaces the probe.
@@ -287,7 +282,7 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 6 - /dev/tcp reachability probe" src="./images/flag06.png" />
+<img width="743" height="411" alt="q6" src="https://github.com/user-attachments/assets/3384a207-3007-469d-868f-823e52902d58" />
 
 **Why This Matters:**
 `/dev/tcp` is a no-tool port scanner — living off the land. The port they probe reveals intent: **3389 = an RDP pivot** was being lined up against the Windows subnet (`10.2.0.10`, `10.2.0.20`).
@@ -301,7 +296,6 @@ Name the tool the operator installed before leaving the Linux host.
 
 **Flag Value:**
 `netexec`
-`2026-06-16T22:29:11Z`
 
 **Detection Strategy:**
 The logs show them *checking for* tools (`which xfreerdp`, `which nxc netexec crackmapexec`) and then *installing* one (`pipx install netexec`). Cutting 598 noisy rows to the answer used the noise toolkit: filter to the attacker account, narrow `install` → `pipx install`, and `| distinct`.
@@ -318,7 +312,7 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 7 - netexec install" src="./images/flag07.png" />
+<img width="492" height="190" alt="q7" src="https://github.com/user-attachments/assets/0c9d0f7e-55dc-497b-ab9d-13241cc94e17" />
 
 **Why This Matters:**
 `which` is shopping; `install` is buying. NetExec (formerly CrackMapExec) is a Swiss-army AD attack tool — installing it right after probing RDP shows the operator arming for the Windows pivot.
