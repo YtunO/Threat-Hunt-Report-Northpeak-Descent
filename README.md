@@ -515,7 +515,6 @@ Describe what the regular spacing between check-ins proves about the channel.
 
 **Flag Value:**
 `regular interval, automated beaconing`
-`2026-06-16T23:15:47Z`
 
 **Detection Strategy:**
 Measuring the gaps between check-ins (`serialize` + `prev()` + `datetime_diff`) shows an even cadence. Regular timing is the signature of a scripted implant on a timer, not a human typing.
@@ -536,7 +535,7 @@ DeviceEvents
 
 **Evidence:**
 
-<img alt="Flag 14 - beacon cadence" src="./images/flag14.png" />
+<img width="495" height="263" alt="q14" src="https://github.com/user-attachments/assets/d55f9cd3-ed82-4f96-a45d-37cfbe82663e" />
 
 **Why This Matters:**
 Timing regularity is itself evidence. Even, machine-precise intervals mean automation; the steady cadence ties the channel to the `NorthpeakSyncTray.ps1` persistence running on a schedule.
@@ -550,7 +549,6 @@ Name the exfiltrated file, the host it left from, and where it went.
 
 **Flag Value:**
 `customer_data_export_20260616.csv, npt-srv01, cdn.sync-northpeak.com`
-`2026-06-16T18:44:08Z`
 
 **Detection Strategy:**
 Exfil is a web request that *sends* a file — `Invoke-WebRequest ... -InFile`. Filtering for upload indicators surfaces one row amid Azure metadata noise: an upload of a customer-data CSV from the server to the C2 domain.
@@ -569,7 +567,7 @@ DeviceEvents
 
 **Evidence:**
 
-<img alt="Flag 15 - exfil upload" src="./images/flag15.png" />
+<img width="1338" height="264" alt="q15" src="https://github.com/user-attachments/assets/e3e9898d-201b-4a26-8473-e68c423898a4" />
 
 **Why This Matters:**
 `-InFile` on `Invoke-WebRequest` means a file leaving the network. The destination URL (`/api/upload?host=NPT-SRV01&data=customers`) practically confesses what was taken and from where — the crown-jewel data theft.
@@ -583,7 +581,6 @@ Determine which RDP session the export was performed in — the first, or the re
 
 **Flag Value:**
 `second`
-`2026-06-16T18:42:52Z`
 
 **Detection Strategy:**
 Fit the known exfil time (6:44:08 PM) between the server's RDP session boundaries: session 1 at 4:58 PM, session 2 at 6:42:52 PM. The upload lands ~76 seconds into the second session.
@@ -601,7 +598,7 @@ DeviceLogonEvents
 
 **Evidence:**
 
-<img alt="Flag 16 - two RDP sessions" src="./images/flag16.png" />
+<img width="969" height="506" alt="q16" src="https://github.com/user-attachments/assets/90957b53-1953-4c15-9f38-27b0be895011" />
 
 **Why This Matters:**
 Correlating an action to a session needs only the session start times and the action's timestamp. The tight 76-second gap between re-login and upload shows the attacker came back specifically to steal the data.
@@ -631,7 +628,8 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 17 - no tampering found" src="./images/flag17.png" />
+<img width="1706" height="492" alt="q177" src="https://github.com/user-attachments/assets/9299ecd4-dc17-42fc-9085-7b61b5f178b0" />
+
 
 **Why This Matters:**
 The stealthiest intrusions don't disable security tools — they avoid needing to. Valid credentials plus native tools produced activity that read as normal administration, so there was nothing to disable and nothing to smuggle in. The *lack* of evasion is the evidence.
@@ -696,14 +694,10 @@ An operator using stolen valid credentials (`sancadmin`) from external IP `148.6
 
 ## 📝 Lessons Learned
 
-- **Timestamps beat theories.** `min(Timestamp)` disproved the "Linux-first" assumption — the workstation was patient zero.
-- **The source IP tells the phase.** External source = getting in; internal `10.x` source = spreading (lateral movement).
-- **Regular = automation, irregular = human.** Applied to clockwork logons, scheduled encoded commands, and steady beacon cadence.
-- **Parent process + account finds the human** hiding in a flood of SYSTEM-owned automation.
-- **The network view isn't the whole truth.** A C2 domain only appears in network logs if it connected; obfuscated domains live in the launching command line.
-- **PowerShell base64 is UTF-16LE.** Decoding the obvious way (UTF-8) yields null-byte gaps.
-- **Sentinel and MDE retain the same events on different clocks.** When Sentinel's copy aged out mid-hunt, MDE's independent ~30-day window still held the evidence — always check both, and preserve artifacts before they roll off.
-- **Absence is a finding.** No tampering + no malware = an attacker who never needed to evade.
+- Follow the evidence, not assumptions: Timestamps, IPs, process context, and timing patterns revealed the attack sequence and distinguished human activity from automation.
+- Use multiple data sources: Network logs, Sentinel, and MDE each provided different pieces of evidence and compensated for each other's blind spots.
+- Decode PowerShell correctly: Base64-encoded PowerShell commands use UTF-16LE, not UTF-8, which otherwise produces null-byte gaps.
+- Absence can be meaningful: No malware or tampering suggested the attacker achieved their objectives without needing to evade defenses.
 
 ---
 
