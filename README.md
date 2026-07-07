@@ -1,3 +1,5 @@
+<img width="1983" height="793" alt="northpeak banner" src="https://github.com/user-attachments/assets/4be1c44e-6099-4259-b679-af34ba719e4f" />
+
 # 📚 Table of Contents
 
 - [Threat Hunt: "Northpeak Descent"](#️‍️-threat-hunt-northpeak-descent)
@@ -703,15 +705,35 @@ An operator using stolen valid credentials (`sancadmin`) from external IP `148.6
 
 ## 🛡️ Recommendations for Remediation
 
-- **Reset and investigate `sancadmin`.** Rotate the credential, review all its recent activity, and determine how it was stolen (the credential arrived already valid — the source is upstream of this estate).
-- **Enforce MFA and Conditional Access on RDP / remote access.** The foothold was a clean credential login from a public IP; MFA and geo/velocity-based Conditional Access would have blocked or challenged it.
-- **Restrict inbound RDP from the internet.** Both Windows hosts accepted RDP directly from a public address — RDP should sit behind a VPN or gateway, never exposed.
-- **Remove the persistence.** Delete the HKCU Run value `NorthpeakSyncTray` and the `C:\ProgramData\Northpeak\NorthpeakSync\Bin\NorthpeakSyncTray.ps1` payload on `npt-ws01`.
-- **Block the C2 infrastructure.** Sinkhole/deny the `sync-northpeak.com` domains and the external IP `148.64.103.173` at the proxy/firewall/DNS layers.
-- **Alert on the behaviors, not just signatures.** Build detections for: public-IP interactive logons, `-EncodedCommand` from non-`gc_worker` parents, `Invoke-WebRequest -InFile` (upload), and HKCU Run-key writes.
-- **Hunt for the stolen data's blast radius.** `customer_data_export_20260616.csv` left the estate — engage data-owner and privacy/GRC processes for breach assessment and notification obligations.
-- **Baseline living-off-the-land tooling.** NetExec was installed via `pipx`; monitor package-manager installs of offensive tooling on servers.
+- ## Investigate the Compromised Credential
+  - Reset the sancadmin account and rotate all associated credentials.
+  - Review authentication logs, privilege usage, and related activity.
+  - Determine the initial source of credential theft, as the account was already valid before entering the environment.
+- ## Enforce MFA & Conditional Access
+  - Require Multi-Factor Authentication (MFA) for all remote access.
+  - Implement Conditional Access policies using location, device compliance, and impossible-travel detection to prevent unauthorized logins.
+- ## Secure Remote Desktop (RDP)
+  - Remove direct internet exposure of RDP.
+  - Restrict RDP access to trusted VPNs, bastion hosts, or Remote Desktop Gateways.
+- ## Remove Persistence Mechanisms
+  - Delete the malicious NorthpeakSyncTray Run registry entry.
+  - Remove the PowerShell payload located at: `C:\ProgramData\Northpeak\NorthpeakSync\Bin\NorthpeakSyncTray.ps1`
+  - Verify no additional persistence techniques remain.
+- ## Block Command-and-Control (C2) Infrastructure
+  - Block the malicious domain sync-northpeak.com.
+  - Deny outbound communication to 148.64.103.173 across DNS, firewall, proxy, and endpoint security controls.
+- ## Improve Threat Detection
+  - Create detections for:
+    - Interactive logons from public IP addresses
+    - PowerShell executed with `-EncodedCommand`
+    - `Invoke-WebRequest -InFile` (potential data exfiltration)
+    - Registry Run key modifications
+    - Suspicious parent-child process relationships
+- ## Assess Data Exposure
+  - Investigate the exfiltration of customer_data_export_20260616.csv.
+  - Determine the scope of affected data.
+  - Engage Privacy, Legal, and GRC teams to evaluate breach notification requirements.
+- ## Monitor Living-off-the-Land (LotL) Activity
+  - Monitor installation of offensive tooling such as NetExec via package managers (e.g., `pipx`).
+  - Alert on the execution of administrative tools commonly abused by attackers.
 
----
-
-*Hunt authored by Dogukan Oruc on [hunt.lognpacific.com](https://hunt.lognpacific.com). Investigation & writeup by Yetunde Odunlami.*
