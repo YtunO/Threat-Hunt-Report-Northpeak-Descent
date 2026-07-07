@@ -326,7 +326,6 @@ Build the internal hop back into the workstation: account, internal source, targ
 
 **Flag Value:**
 `sancadmin, 10.2.0.30, npt-ws01`
-`2026-06-16T22:32:18Z`
 
 **Detection Strategy:**
 The signature of a pivot is the source IP flipping from external to internal. Filtering the workstation's logins to internal `10.x` sources (excluding the external IP) reveals `sancadmin` from `10.2.0.30` (the Linux box) over `Network` (SMB) — NetExec in action.
@@ -345,7 +344,7 @@ DeviceLogonEvents
 
 **Evidence:**
 
-<img alt="Flag 8 - internal pivot to ws01" src="./images/flag08.png" />
+<img width="719" height="388" alt="q8" src="https://github.com/user-attachments/assets/fd92ac71-3971-42ae-a76d-d40339a7be71" />
 
 **Why This Matters:**
 The source IP tells the phase: external = getting in, internal `10.x` = spreading. The `Network` logon type (not RemoteInteractive) confirms a tool authenticating over SMB rather than a person opening a desktop.
@@ -359,7 +358,6 @@ Separate the human operator's PowerShell from the machine's own automation.
 
 **Flag Value:**
 `explorer.exe`
-`2026-06-16T22:43:00Z`
 
 **Detection Strategy:**
 Grouping PowerShell by parent process and account splits automation from the human. Every parent runs as `SYSTEM` except `explorer.exe` — the interactive desktop shell — running as `sancadmin`, meaning a person launched PowerShell by hand.
@@ -376,7 +374,7 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 9 - explorer.exe parent" src="./images/flag09.png" />
+<img width="591" height="357" alt="q9" src="https://github.com/user-attachments/assets/c65c451a-0a3e-4661-b51b-d449f3c10dad" />
 
 **Why This Matters:**
 `explorer.exe` as a parent means an interactive human session — a reliable hands-on-keyboard fingerprint. When a host is drowning in a common tool, the anomaly lives in the lineage, not the command text.
@@ -390,7 +388,6 @@ Recover the full command the attacker planted to survive a reboot.
 
 **Flag Value:**
 `powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\ProgramData\Northpeak\NorthpeakSync\Bin\NorthpeakSyncTray.ps1"`
-`2026-06-16T23:04:16Z`
 
 **Detection Strategy:**
 Logon persistence on the user's own profile points to the HKCU Run key. The disguise is in the value *name* (`NorthpeakSyncTray`); the real command lives in `RegistryValueData`.
@@ -407,7 +404,7 @@ DeviceRegistryEvents
 
 **Evidence:**
 
-<img alt="Flag 10 - HKCU Run key persistence" src="./images/flag10.png" />
+<img width="1525" height="251" alt="q10" src="https://github.com/user-attachments/assets/30072f52-ffc1-4cc7-a334-978c0fc1a45e" />
 
 **Why This Matters:**
 The HKCU Run key runs at every logon for that user — per-user persistence needing no admin rights. The stealth flags (`-WindowStyle Hidden`, `-ExecutionPolicy Bypass`) and a benign-sounding name are classic disguise; the payload is the whole command line, not just the script path.
@@ -421,7 +418,6 @@ Find all three look-alike C2 subdomains and where the two the network missed wer
 
 **Flag Value:**
 `status.sync-northpeak.com, updates.sync-northpeak.com, cdn.sync-northpeak.com; InitiatingProcessCommandLine`
-`2026-06-16T23:15:47Z`
 
 **Detection Strategy:**
 The network table logged only `status` (the one that connected). The other two survive in the launching command — each `Invoke-WebRequest` was wrapped in a `Start-Process`, so the URL persists in `InitiatingProcessCommandLine` even without a network record.
@@ -439,7 +435,7 @@ DeviceEvents
 
 **Evidence:**
 
-<img alt="Flag 11 - three beacon domains" src="./images/flag11.png" />
+<img width="1639" height="485" alt="q11" src="https://github.com/user-attachments/assets/a9a5cfcf-a59e-4a28-8703-ee6940b747bb" />
 
 **Why This Matters:**
 The network view is not the whole truth — a domain only appears there if it connected. Correlating "what connected" against "what was attempted" (the launching command line) reveals the domains hiding in the gap.
@@ -475,7 +471,7 @@ print(base64.b64decode(blob).decode("utf-16-le"))
 
 **Evidence:**
 
-<img alt="Flag 12 - decoded beacon" src="./images/flag12.png" />
+<img width="1698" height="322" alt="q12" src="https://github.com/user-attachments/assets/f0397019-ac00-496b-abe8-4ab28f000cfa" />
 
 **Why This Matters:**
 PowerShell base64 is UTF-16LE — decoding "the obvious way" fails. This flag also required recovering data from **MDE** after it aged out of the Sentinel workspace, proving the two consoles retain the same events on different clocks.
@@ -505,7 +501,7 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 13 - gc_worker vs powershell split" src="./images/flag13.png" />
+<img width="458" height="237" alt="q13" src="https://github.com/user-attachments/assets/441147ca-d89d-44a3-b77b-bd0918d063d8" />
 
 **Why This Matters:**
 Encoded ≠ malicious. Establishing the benign baseline by *who ran it* is what lets the three operator commands stand out from twelve pieces of routine automation.
@@ -649,7 +645,6 @@ Identify what the operator confirmed about their account on re-entry.
 
 **Flag Value:**
 `whoami /groups, local admin`
-`2026-06-16T22:43:04Z`
 
 **Detection Strategy:**
 The re-entry burst runs `whoami` then `whoami /groups`. The operator reads the group output for the well-known SID `S-1-5-32-544` — the local Administrators group — confirming admin rights by SID rather than the localizable name.
@@ -666,7 +661,7 @@ DeviceProcessEvents
 
 **Evidence:**
 
-<img alt="Flag 18 - whoami /groups admin check" src="./images/flag18.png" />
+<img width="820" height="418" alt="q18" src="https://github.com/user-attachments/assets/af072a2d-28d8-42e4-8146-97d61901e6d1" />
 
 **Why This Matters:**
 `S-1-5-32-544` is the local Administrators group on every Windows machine. Checking membership by SID is language-independent — a reliable way for an operator to confirm they hold local admin before proceeding.
